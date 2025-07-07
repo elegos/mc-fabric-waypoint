@@ -15,7 +15,6 @@ public class WaypointModServer implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		WaypointConfig.load();
 		WaypointCommand.register();
 	}
 }

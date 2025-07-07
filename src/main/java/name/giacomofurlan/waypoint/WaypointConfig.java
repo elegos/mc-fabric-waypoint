@@ -47,7 +47,7 @@ public class WaypointConfig {
 
     public static void load() {
         if (!Files.exists(CONFIG_PATH)) {
-            save(); // salva valori default
+            save();
             return;
         }
 

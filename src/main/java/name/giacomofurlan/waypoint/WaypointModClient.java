@@ -18,6 +18,7 @@ public class WaypointModClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+		WaypointConfig.load();
         WaypointNetworkHandler.registerClientPayloadTypes();
         WaypointNetworkHandler.registerClientReceivers();
         WaypointCommand.registerClient();
