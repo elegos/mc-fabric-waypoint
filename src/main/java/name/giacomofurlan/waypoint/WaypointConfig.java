@@ -13,9 +13,9 @@ import com.google.gson.JsonPrimitive;
 import net.fabricmc.loader.api.FabricLoader;
 
 public class WaypointConfig {
-    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve(WaypointModServer.MOD_ID + ".config.json");
+    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve(WaypointModServer.MOD_ID + "/config.json");
 
-    private static double range = 5.0;
+    private static double range = 2.0;
     private static boolean toggleAfterReach = true;
     private static boolean removeAfterReach = true;
 
