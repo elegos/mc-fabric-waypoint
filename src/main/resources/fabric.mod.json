@@ -3,13 +3,13 @@
 	"id": "waypoint",
 	"version": "${version}",
 	"name": "Waypoint",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "Manage waypoints in the game, and navigate with a location bar!",
 	"authors": [
-		"Me!"
+		"Giacomo 'Mr. Wolf' Furlan"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://github.com/elegos/mc-fabric-waypoint",
+		"sources": "https://github.com/elegos/mc-fabric-waypoint"
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/waypoint/icon.png",
