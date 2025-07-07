@@ -8,12 +8,11 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 
-import name.giacomofurlan.waypoint.client.WaypointNavigation;
-import name.giacomofurlan.waypoint.client.WaypointScreen;
 import name.giacomofurlan.waypoint.models.Waypoint;
+import name.giacomofurlan.waypoint.network.AddWaypointPayload;
 import name.giacomofurlan.waypoint.network.WaypointNetworkHandler;
+import name.giacomofurlan.waypoint.network.WaypointSimpleActionPayload;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.IdentifierArgumentType;
 import net.minecraft.command.argument.Vec3ArgumentType;
@@ -41,7 +40,7 @@ public class WaypointCommand {
             dispatcher.register(CommandManager.literal("waypoint")
                 .then(CommandManager.argument("name", StringArgumentType.string())
                     .then(CommandManager.argument("pos", Vec3ArgumentType.vec3())
-                        .executes(WaypointCommand::addWaypointDefaultDim)
+                        .executes(WaypointCommand::addWaypointCurrentDim)
                         .then(CommandManager.argument("world", IdentifierArgumentType.identifier())
                             .suggests(DIMENSION_SUGGESTIONS)
                             .executes(WaypointCommand::addWaypointWithDim)
@@ -69,28 +68,32 @@ public class WaypointCommand {
                 .then(CommandManager.literal("toggleAfterReach")
                     .then(CommandManager.argument("toggle", BoolArgumentType.bool())
                         .executes(WaypointCommand::setToggleAfterReach)))
+                
+                .executes(WaypointCommand::openSettingsScreen)
             );
         });
     }
 
-    public static void registerClient() {
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environament) -> {
-            dispatcher.register(CommandManager.literal("waypoint")
-                .executes(context -> {
-                    MinecraftClient.getInstance().execute(() -> {
-                        MinecraftClient.getInstance().setScreen(new WaypointScreen());
-                    });
-                    return 1;
-                })
-            );
-        });
-    }
+    private static int addWaypointCurrentDim(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource source = ctx.getSource();
 
-    private static int addWaypointDefaultDim(CommandContext<ServerCommandSource> ctx) {
-        return addWaypoint(ctx, Identifier.of("minecraft", "overworld"));
+        if (!(source.getEntity() instanceof ServerPlayerEntity)) {
+            source.sendError(Text.literal("This command can only be executed by a player."));
+            return 1;
+        }
+
+        Identifier dimension = ctx.getSource().getWorld().getRegistryKey().getValue();
+        return addWaypoint(ctx, dimension);
     }
 
     private static int addWaypointWithDim(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
+        ServerCommandSource source = ctx.getSource();
+
+        if (!(source.getEntity() instanceof ServerPlayerEntity)) {
+            source.sendError(Text.literal("This command can only be executed by a player."));
+            return 1;
+        }
+
         Identifier dimension = IdentifierArgumentType.getIdentifier(ctx, "world");
         RegistryKey<World> worldKey = RegistryKey.of(RegistryKeys.WORLD, dimension);
 
@@ -101,14 +104,12 @@ public class WaypointCommand {
 
         addWaypoint(ctx, dimension);
 
-        if (ctx.getSource().getWorld().getRegistryKey().equals(worldKey)) {
-            activateWaypoint(ctx);
-        }
-
         return 1;
     }
 
     private static int addWaypoint(CommandContext<ServerCommandSource> ctx, Identifier dimension) {
+        ServerCommandSource source = ctx.getSource();
+
         String name = StringArgumentType.getString(ctx, "name");
         Vec3d pos = Vec3ArgumentType.getVec3(ctx, "pos");
         double x = pos.getX();
@@ -116,103 +117,118 @@ public class WaypointCommand {
         double z = pos.getZ();
 
         Waypoint wp = new Waypoint(name, new Vec3d(x, y, z), dimension);
-        WaypointManager.getInstance().addWaypoint(wp);
-        ctx.getSource().sendFeedback(() -> Text.literal("Waypoint \"" + name + "\" saved for dimension " + dimension), false);
 
-        activateWaypoint(ctx);
-        
+        AddWaypointPayload payload = new AddWaypointPayload(wp);
+        WaypointNetworkHandler.sendAddWaypointPacket(source.getPlayer(), payload);
+
         return 1;
     }
 
     private static int waypointsList(CommandContext<ServerCommandSource> ctx) {
-        var src = ctx.getSource();
-        var waypoints = WaypointManager.getInstance().getAllWaypoints();
-        if (waypoints.isEmpty()) {
-            src.sendFeedback(() -> Text.literal("Waypoints list is empty."), false);
+        ServerCommandSource source = ctx.getSource();
+
+        if (source.getEntity() instanceof ServerPlayerEntity player) {
+            WaypointSimpleActionPayload payload = new WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action.LIST);
+            WaypointNetworkHandler.sendWaypointSimpleActionPayload(player, payload);
         } else {
-            src.sendFeedback(() -> Text.literal("Saved waypoints:"), false);
-            waypoints.forEach(wp -> {
-                String info = "- " + wp.getName() + " @ [" + 
-                    (int)wp.getPosition().x + " " +
-                    (int)wp.getPosition().y + " " +
-                    (int)wp.getPosition().z + "] in " +
-                    wp.getDimension();
-                src.sendFeedback(() -> Text.literal(info), false);
-            });
+            source.sendError(Text.literal("This command can only be executed by a player."));
         }
 
         return 1;
     }
 
-    private static void deleteWaypointCore(CommandContext<ServerCommandSource> ctx, String name) {
-        Waypoint currentWaypoint = WaypointNavigation.getActiveWaypoint();
-        WaypointManager.getInstance().removeWaypoint(name);
-        ctx.getSource().sendFeedback(() -> Text.literal("Waypoint \"" + name + "\" was removed."), false);
-
-        if (currentWaypoint != null) {
-            WaypointNavigation.clear();
-        }
-    }
-
     private static int deleteWaypoint(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource source = ctx.getSource();
         String name = StringArgumentType.getString(ctx, "name");
-        deleteWaypointCore(ctx, name);
+
+        if (source.getEntity() instanceof ServerPlayerEntity player) {
+            WaypointSimpleActionPayload payload = new WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action.DELETE, name);
+            WaypointNetworkHandler.sendWaypointSimpleActionPayload(player, payload);
+        } else {
+            source.sendError(Text.literal("This command can only be executed by a player."));
+        }
 
         return 1;
     }
 
     private static int deleteWaypointNoName(CommandContext<ServerCommandSource> ctx) {
-        Waypoint currentWaypoint = WaypointNavigation.getActiveWaypoint();
-        if (currentWaypoint == null) {
-            return 0;
+        ServerCommandSource source = ctx.getSource();
+
+        if (source.getEntity() instanceof ServerPlayerEntity player) {
+            WaypointSimpleActionPayload payload = new WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action.DELETE);
+            WaypointNetworkHandler.sendWaypointSimpleActionPayload(player, payload);
+        } else {
+            source.sendError(Text.literal("This command can only be executed by a player."));
         }
-        deleteWaypointCore(ctx, currentWaypoint.getName());
 
         return 1;
     }
 
     private static int setRange(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource source = ctx.getSource();
         double dist = DoubleArgumentType.getDouble(ctx, "distance");
-        WaypointConfig.setRange(dist);
-        ctx.getSource().sendFeedback(() -> Text.literal("Arrival distance set to " + dist + " blocks."), false);
+
+        if (source.getEntity() instanceof ServerPlayerEntity player) {
+            WaypointSimpleActionPayload payload = new WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action.SET_RANGE, dist);
+            WaypointNetworkHandler.sendWaypointSimpleActionPayload(player, payload);
+        } else {
+            source.sendError(Text.literal("This command can only be executed by a player."));
+        }
 
         return 1;
     }
 
     private static int setRemoveAfterReach(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource source = ctx.getSource();
         boolean val = BoolArgumentType.getBool(ctx, "toggle");
-        WaypointConfig.setRemoveAfterReach(val);
-        ctx.getSource().sendFeedback(() -> Text.literal("Waypoint auto-removal: " + (val ? "enabled" : "disabled")), false);
+
+        if (source.getEntity() instanceof ServerPlayerEntity player) {
+            WaypointSimpleActionPayload payload = new WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action.SET_REMOVE_AFTER_REACH, val);
+            WaypointNetworkHandler.sendWaypointSimpleActionPayload(player, payload);
+        } else {
+            source.sendError(Text.literal("This command can only be executed by a player."));
+        }
 
         return 1;
     }
 
     private static int setToggleAfterReach(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource source = ctx.getSource();
         boolean val = BoolArgumentType.getBool(ctx, "toggle");
-        WaypointConfig.setToggleAfterReach(val);
-        ctx.getSource().sendFeedback(() -> Text.literal("Waypoint toggle after reach: " + (val ? "enabled" : "disabled")), false);
+
+        if (source.getEntity() instanceof ServerPlayerEntity player) {
+            WaypointSimpleActionPayload payload = new WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action.SET_TOGGLE_AFTER_REACH, val);
+            WaypointNetworkHandler.sendWaypointSimpleActionPayload(player, payload);
+        } else {
+            source.sendError(Text.literal("This command can only be executed by a player."));
+        }
 
         return 1;
     }
 
     private static int activateWaypoint(CommandContext<ServerCommandSource> ctx) {
         String name = StringArgumentType.getString(ctx, "name");
-        Waypoint wp = WaypointManager.getInstance().getWaypoint(name);
         ServerCommandSource source = ctx.getSource();
 
-        if (wp == null) {
-            ctx.getSource().sendError(Text.literal("Waypoint \"" + name + "\" not found."));
-            return 0;
-        }
-
         if (source.getEntity() instanceof ServerPlayerEntity player) {
-            WaypointNetworkHandler.sendActivateWaypointPacket(player, wp);
-
-            source.sendFeedback(() -> Text.literal("Heading to waypoint \"" + name + "\"."), false);
+            WaypointSimpleActionPayload payload = new WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action.ACTIVATE, name);
+            WaypointNetworkHandler.sendWaypointSimpleActionPayload(player, payload);
         } else {
             source.sendError(Text.literal("This command can only be executed by a player."));
         }
 
+        return 1;
+    }
+
+    private static int openSettingsScreen(CommandContext<ServerCommandSource> ctx) {
+        ServerCommandSource source = ctx.getSource();
+
+        if (source.getEntity() instanceof ServerPlayerEntity player) {
+            WaypointSimpleActionPayload payload = new WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action.OPEN_SETTINGS_SCREEN);
+            WaypointNetworkHandler.sendWaypointSimpleActionPayload(player, payload);
+        } else {
+            source.sendError(Text.literal("This command can only be executed by a player."));
+        }
 
         return 1;
     }

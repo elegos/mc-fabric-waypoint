@@ -5,11 +5,9 @@ import org.slf4j.LoggerFactory;
 
 import name.giacomofurlan.waypoint.client.WaypointHudElement;
 import name.giacomofurlan.waypoint.client.WaypointNavigation;
-import name.giacomofurlan.waypoint.network.ActivateWaypointPayload;
-import name.giacomofurlan.waypoint.network.WaypointNetworkHandler;
+import name.giacomofurlan.waypoint.client.network.WaypointNetworkClientHandler;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.util.Identifier;
 
@@ -19,20 +17,12 @@ public class WaypointModClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
 		WaypointConfig.load();
-        WaypointNetworkHandler.registerClientPayloadTypes();
-        WaypointNetworkHandler.registerClientReceivers();
-        WaypointCommand.registerClient();
+        WaypointNetworkClientHandler.registerClientPayloadTypes();
+        WaypointNetworkClientHandler.registerClientReceivers();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			WaypointNavigation.tick();
 		});
-
-        ClientPlayNetworking.registerGlobalReceiver(
-            ActivateWaypointPayload.ID,
-            (payload, context) -> {
-                WaypointNavigation.setActiveWaypoint(payload.toWaypoint());
-            }
-        );
 
         HudElementRegistry.addLast(Identifier.of(WaypointModServer.MOD_ID, "waypoint_hud"), new WaypointHudElement());
     }

@@ -1,35 +1,25 @@
 package name.giacomofurlan.waypoint.network;
 
-import name.giacomofurlan.waypoint.client.WaypointNavigation;
 import name.giacomofurlan.waypoint.models.Waypoint;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import name.giacomofurlan.waypoint.network.WaypointSimpleActionPayload.Action;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 public class WaypointNetworkHandler {
-    public static void registerClientPayloadTypes() {
-        PayloadTypeRegistry.playS2C().register(
-            ActivateWaypointPayload.ID,
-            PacketCodec.of(ActivateWaypointPayload::write, ActivateWaypointPayload::read)
-        );
-    }
 
-    public static void registerClientReceivers() {
-        ClientPlayNetworking.registerGlobalReceiver(
-            ActivateWaypointPayload.ID,
-            (payload, context) -> {
-                WaypointNavigation.setActiveWaypoint(payload.toWaypoint());
-            }
-        );
-    }
-
-    public static void sendActivateWaypointPacket(ServerPlayerEntity player, ActivateWaypointPayload payload) {
+    public static void sendWaypointSimpleActionPayload(ServerPlayerEntity player, WaypointSimpleActionPayload payload) {
         ServerPlayNetworking.send(player, payload);
     }
 
-    public static void sendActivateWaypointPacket(ServerPlayerEntity player, Waypoint waypoint) {
-        sendActivateWaypointPacket(player, new ActivateWaypointPayload(waypoint));
+    public static void sendWaypointSimpleActionPayload(ServerPlayerEntity player, Action action, String waypointName) {
+        sendWaypointSimpleActionPayload(player, new WaypointSimpleActionPayload(action, waypointName));
+    }
+
+    public static void sendAddWaypointPacket(ServerPlayerEntity player, AddWaypointPayload payload) {
+        ServerPlayNetworking.send(player, payload);
+    }
+
+    public static void sendAddWaypointPacket(ServerPlayerEntity player, Waypoint waypoint) {
+        sendAddWaypointPacket(player, new AddWaypointPayload(waypoint));
     }
 }
