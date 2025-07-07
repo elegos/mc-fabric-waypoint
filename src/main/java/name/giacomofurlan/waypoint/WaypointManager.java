@@ -13,22 +13,20 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import name.giacomofurlan.waypoint.models.Waypoint;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.ServerInfo;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
-
-import name.giacomofurlan.waypoint.models.Waypoint;
 
 public class WaypointManager {
     private static final WaypointManager INSTANCE = new WaypointManager();
     private final Map<String, Waypoint> waypoints = new HashMap<>();
-    private final File saveFile;
+
+    private final File configDir = new File(FabricLoader.getInstance().getConfigDir().toFile(), WaypointModServer.MOD_ID);
 
     private WaypointManager() {
-        File configDir = new File(MinecraftClient.getInstance().runDirectory, "config/waypointmod");
-        if (!configDir.exists()) configDir.mkdirs();
-        saveFile = new File(configDir, "waypoints.json");
-
         load();
     }
 
@@ -43,6 +41,9 @@ public class WaypointManager {
     }
 
     public void removeWaypoint(String name) {
+        if (name == null) {
+            return;
+        }
         waypoints.remove(name.toLowerCase());
 
         save();
@@ -57,6 +58,12 @@ public class WaypointManager {
     }
 
     public void save() {
+        File saveFile = getSaveFileForCurrentWorld();
+
+        if (!saveFile.exists()) {
+            saveFile.getParentFile().mkdirs();
+        }
+
         try (FileWriter writer = new FileWriter(saveFile)) {
             JsonArray array = new JsonArray();
             for (Waypoint wp : waypoints.values()) {
@@ -75,6 +82,8 @@ public class WaypointManager {
     }
 
     public void load() {
+        File saveFile = getSaveFileForCurrentWorld();
+
         if (!saveFile.exists()) return;
 
         try (FileReader reader = new FileReader(saveFile)) {
@@ -91,6 +100,24 @@ public class WaypointManager {
             }
         } catch (Exception e) {
             name.giacomofurlan.waypoint.WaypointModServer.LOGGER.error("Error while loading waypoints.", e);
+        }
+    }
+
+    private File getSaveFileForCurrentWorld() {
+        MinecraftClient client = MinecraftClient.getInstance();
+
+        if (client.getServer() != null) {
+            // Singleplayer
+            String levelName = client.getServer().getSaveProperties().getLevelName();
+            return new File(configDir, "singleplayer/" + levelName + ".json");
+        } else if (client.getCurrentServerEntry() != null) {
+            // Multiplayer
+            ServerInfo server = client.getCurrentServerEntry();
+            String safeName = server.address.replace(":", "_").replaceAll("[^a-zA-Z0-9_\\-\\.]", "_");
+            return new File(configDir, "multiplayer/" + safeName + ".json");
+        } else {
+            // Fallback
+            return new File(configDir, "default.json");
         }
     }
 }
