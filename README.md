@@ -4,6 +4,10 @@
 
 This mod allows the players to add their waypoints and follow them with a centered top locator, including arrows indicating if the waypoint is above or below the player him/herself.
 
+## Installation
+
+This is a client-server mod, and thus needs to be installed on both of them.
+
 ## Commands
 
 - `/waypoint name` activates the waypoint called "name". If quoted, spaces might be used aswell.
