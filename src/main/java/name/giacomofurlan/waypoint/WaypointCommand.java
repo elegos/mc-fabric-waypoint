@@ -8,6 +8,10 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 
+import name.giacomofurlan.waypoint.client.WaypointNavigation;
+import name.giacomofurlan.waypoint.client.WaypointScreen;
+import name.giacomofurlan.waypoint.models.Waypoint;
+import name.giacomofurlan.waypoint.network.WaypointNetworkHandler;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.command.CommandSource;
@@ -23,9 +27,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
-import name.giacomofurlan.waypoint.client.WaypointScreen;
-import name.giacomofurlan.waypoint.models.Waypoint;
-import name.giacomofurlan.waypoint.network.WaypointNetworkHandler;
 
 public class WaypointCommand {
     private static final SuggestionProvider<ServerCommandSource> DIMENSION_SUGGESTIONS = (context, builder) -> {
@@ -54,7 +55,8 @@ public class WaypointCommand {
 
                 .then(CommandManager.literal("delete")
                     .then(CommandManager.argument("name", StringArgumentType.string())
-                        .executes(WaypointCommand::deleteWaypoint)))
+                        .executes(WaypointCommand::deleteWaypoint))
+                    .executes(WaypointCommand::deleteWaypointNoName))
 
                 .then(CommandManager.literal("range")
                     .then(CommandManager.argument("distance", DoubleArgumentType.doubleArg(0))
@@ -75,7 +77,9 @@ public class WaypointCommand {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environament) -> {
             dispatcher.register(CommandManager.literal("waypoint")
                 .executes(context -> {
-                    MinecraftClient.getInstance().setScreen(new WaypointScreen());
+                    MinecraftClient.getInstance().execute(() -> {
+                        MinecraftClient.getInstance().setScreen(new WaypointScreen());
+                    });
                     return 1;
                 })
             );
@@ -140,10 +144,29 @@ public class WaypointCommand {
         return 1;
     }
 
-    private static int deleteWaypoint(CommandContext<ServerCommandSource> ctx) {
-        String name = StringArgumentType.getString(ctx, "name");
+    private static void deleteWaypointCore(CommandContext<ServerCommandSource> ctx, String name) {
+        Waypoint currentWaypoint = WaypointNavigation.getActiveWaypoint();
         WaypointManager.getInstance().removeWaypoint(name);
         ctx.getSource().sendFeedback(() -> Text.literal("Waypoint \"" + name + "\" was removed."), false);
+
+        if (currentWaypoint != null) {
+            WaypointNavigation.clear();
+        }
+    }
+
+    private static int deleteWaypoint(CommandContext<ServerCommandSource> ctx) {
+        String name = StringArgumentType.getString(ctx, "name");
+        deleteWaypointCore(ctx, name);
+
+        return 1;
+    }
+
+    private static int deleteWaypointNoName(CommandContext<ServerCommandSource> ctx) {
+        Waypoint currentWaypoint = WaypointNavigation.getActiveWaypoint();
+        if (currentWaypoint == null) {
+            return 0;
+        }
+        deleteWaypointCore(ctx, currentWaypoint.getName());
 
         return 1;
     }
