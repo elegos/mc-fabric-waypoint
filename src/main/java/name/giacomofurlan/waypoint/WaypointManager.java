@@ -24,7 +24,7 @@ public class WaypointManager {
     private static final WaypointManager INSTANCE = new WaypointManager();
     private final Map<String, Waypoint> waypoints = new HashMap<>();
 
-    private final File configDir = new File(FabricLoader.getInstance().getConfigDir().toFile(), WaypointModServer.MOD_ID);
+    private final File configDir = new File(FabricLoader.getInstance().getConfigDir().toFile(), WaypointMod.MOD_ID);
 
     private WaypointManager() {
         load();
@@ -77,7 +77,7 @@ public class WaypointManager {
             }
             new GsonBuilder().setPrettyPrinting().create().toJson(array, writer);
         } catch (Exception e) {
-            name.giacomofurlan.waypoint.WaypointModServer.LOGGER.error("Error while saving waypoints.", e);
+            name.giacomofurlan.waypoint.WaypointMod.LOGGER.error("Error while saving waypoints.", e);
         }
     }
 
@@ -99,7 +99,7 @@ public class WaypointManager {
                 waypoints.put(name.toLowerCase(), new Waypoint(name, new Vec3d(x, y, z), dim));
             }
         } catch (Exception e) {
-            name.giacomofurlan.waypoint.WaypointModServer.LOGGER.error("Error while loading waypoints.", e);
+            name.giacomofurlan.waypoint.WaypointMod.LOGGER.error("Error while loading waypoints.", e);
         }
     }
 

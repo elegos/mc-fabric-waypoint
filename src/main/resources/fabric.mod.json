@@ -16,7 +16,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"name.giacomofurlan.waypoint.WaypointModServer"
+			"name.giacomofurlan.waypoint.WaypointMod"
 		],
 		"client": [
 			"name.giacomofurlan.waypoint.WaypointModClient"

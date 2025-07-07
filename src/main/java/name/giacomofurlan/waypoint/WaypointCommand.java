@@ -38,17 +38,6 @@ public class WaypointCommand {
     public static void register() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(CommandManager.literal("waypoint")
-                .then(CommandManager.argument("name", StringArgumentType.string())
-                    .then(CommandManager.argument("pos", Vec3ArgumentType.vec3())
-                        .executes(WaypointCommand::addWaypointCurrentDim)
-                        .then(CommandManager.argument("world", IdentifierArgumentType.identifier())
-                            .suggests(DIMENSION_SUGGESTIONS)
-                            .executes(WaypointCommand::addWaypointWithDim)
-                        )
-                    )
-                    .executes(WaypointCommand::activateWaypoint)
-                )
-
                 .then(CommandManager.literal("list")
                     .executes(WaypointCommand::waypointsList))
 
@@ -68,6 +57,17 @@ public class WaypointCommand {
                 .then(CommandManager.literal("toggleAfterReach")
                     .then(CommandManager.argument("toggle", BoolArgumentType.bool())
                         .executes(WaypointCommand::setToggleAfterReach)))
+
+                .then(CommandManager.argument("name", StringArgumentType.string())
+                    .then(CommandManager.argument("pos", Vec3ArgumentType.vec3())
+                        .executes(WaypointCommand::addWaypointCurrentDim)
+                        .then(CommandManager.argument("world", IdentifierArgumentType.identifier())
+                            .suggests(DIMENSION_SUGGESTIONS)
+                            .executes(WaypointCommand::addWaypointWithDim)
+                        )
+                    )
+                    .executes(WaypointCommand::activateWaypoint)
+                )
                 
                 .executes(WaypointCommand::openSettingsScreen)
             );

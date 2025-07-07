@@ -9,30 +9,16 @@ import name.giacomofurlan.waypoint.network.AddWaypointPayload;
 import name.giacomofurlan.waypoint.network.WaypointSimpleActionPayload;
 import name.giacomofurlan.waypoint.network.WaypointSimpleActionPayload.Action;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.hud.InGameHud;
-import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.text.Text;
 
 public class WaypointNetworkClientHandler {
-     public static void registerClientPayloadTypes() {
-        PayloadTypeRegistry.playS2C().register(
-            WaypointSimpleActionPayload.ID,
-            PacketCodec.of(WaypointSimpleActionPayload::write, WaypointSimpleActionPayload::read)
-        );
-
-        PayloadTypeRegistry.playS2C().register(
-            AddWaypointPayload.ID,
-            PacketCodec.of(AddWaypointPayload::write, AddWaypointPayload::read)
-        );
-    }
-
     public static void registerClientReceivers() {
         ClientPlayNetworking.registerGlobalReceiver(
             WaypointSimpleActionPayload.ID,
             (payload, context) -> {
-                InGameHud hud = MinecraftClient.getInstance().inGameHud;
+                ChatHud chatHud = MinecraftClient.getInstance().inGameHud.getChatHud();
 
                 Action action = payload.getAction();
                 String waypointName = payload.getWaypointName();
@@ -41,16 +27,15 @@ public class WaypointNetworkClientHandler {
 
                 Waypoint waypoint = WaypointManager.getInstance().getWaypoint(waypointName);
 
-                if (waypoint == null) {
-                    return;
-                }
-
                 switch(action) {
                     case ACTIVATE:
-                        WaypointNavigation.setActiveWaypoint(waypoint);
+                        if (waypoint != null) {
+                            WaypointNavigation.setActiveWaypoint(waypoint);
+                        }
+                            
                         break;
                     case DELETE:
-                        if (waypointName != null) {
+                        if (waypointName != null && waypointName.length() > 0) {
                             WaypointManager.getInstance().removeWaypoint(waypointName);
                         } else {
                             Waypoint currentWaypoint = WaypointNavigation.getActiveWaypoint();
@@ -67,30 +52,30 @@ public class WaypointNetworkClientHandler {
                     case LIST:
                         var waypoints = WaypointManager.getInstance().getAllWaypoints();
                         if (waypoints.isEmpty()) {
-                            hud.setOverlayMessage(Text.literal("Waypoints list is empty."), false);
+                            chatHud.addMessage(Text.literal("Waypoints list is empty."));
                         } else {
-                            hud.setOverlayMessage(Text.literal("Saved waypoints:"), false);
+                            chatHud.addMessage(Text.literal("Saved waypoints:"));
                             waypoints.forEach(wp -> {
                                 String info = "- " + wp.getName() + " @ [" + 
                                     (int)wp.getPosition().x + " " +
                                     (int)wp.getPosition().y + " " +
                                     (int)wp.getPosition().z + "] in " +
                                     wp.getDimension();
-                                hud.setOverlayMessage(Text.literal(info), false);
+                                chatHud.addMessage(Text.literal(info));
                             });
                         }
                         break;
                     case SET_TOGGLE_AFTER_REACH:
                         WaypointConfig.setToggleAfterReach(boolValue);
-                        hud.setOverlayMessage(Text.literal("Waypoint toggle after reach: " + (boolValue ? "enabled" : "disabled")), false);
+                        chatHud.addMessage(Text.literal("Waypoint toggle after reach: " + (boolValue ? "enabled" : "disabled")));
                         break;
                     case SET_REMOVE_AFTER_REACH:
                         WaypointConfig.setRemoveAfterReach(boolValue);
-                        hud.setOverlayMessage(Text.literal("Waypoint auto-removal: " + (boolValue ? "enabled" : "disabled")), false);
+                        chatHud.addMessage(Text.literal("Waypoint auto-removal: " + (boolValue ? "enabled" : "disabled")));
                         break;
                     case SET_RANGE:
                         WaypointConfig.setRange(doubleValue);
-                        hud.setOverlayMessage(Text.literal("Arrival distance set to " + doubleValue + " blocks."), false);
+                        chatHud.addMessage(Text.literal("Arrival distance set to " + doubleValue + " blocks."));
                         break;
                 }
             }

@@ -13,7 +13,7 @@ import com.google.gson.JsonPrimitive;
 import net.fabricmc.loader.api.FabricLoader;
 
 public class WaypointConfig {
-    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve(WaypointModServer.MOD_ID + "/config.json");
+    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve(WaypointMod.MOD_ID + "/config.json");
 
     private static double range = 2.0;
     private static boolean toggleAfterReach = true;
@@ -63,7 +63,7 @@ public class WaypointConfig {
                 removeAfterReach = json.get("removeAfterReach").getAsBoolean();
             }
         } catch (Exception e) {
-            WaypointModServer.LOGGER.error("Error while loading Waypoint config.", e);
+            WaypointMod.LOGGER.error("Error while loading Waypoint config.", e);
         }
     }
 
@@ -76,7 +76,7 @@ public class WaypointConfig {
         try (FileWriter writer = new FileWriter(CONFIG_PATH.toFile())) {
             writer.write(json.toString());
         } catch (IOException e) {
-            WaypointModServer.LOGGER.error("Error while saving Waypoint config.", e);
+            WaypointMod.LOGGER.error("Error while saving Waypoint config.", e);
         }
     }
 

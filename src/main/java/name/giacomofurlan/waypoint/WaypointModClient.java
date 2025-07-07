@@ -12,18 +12,17 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.util.Identifier;
 
 public class WaypointModClient implements ClientModInitializer {
-	public static final Logger LOGGER = LoggerFactory.getLogger(WaypointModServer.MOD_ID);
+	public static final Logger LOGGER = LoggerFactory.getLogger(WaypointMod.MOD_ID);
 
     @Override
     public void onInitializeClient() {
 		WaypointConfig.load();
-        WaypointNetworkClientHandler.registerClientPayloadTypes();
         WaypointNetworkClientHandler.registerClientReceivers();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			WaypointNavigation.tick();
 		});
 
-        HudElementRegistry.addLast(Identifier.of(WaypointModServer.MOD_ID, "waypoint_hud"), new WaypointHudElement());
+        HudElementRegistry.addLast(Identifier.of(WaypointMod.MOD_ID, "waypoint_hud"), new WaypointHudElement());
     }
 }

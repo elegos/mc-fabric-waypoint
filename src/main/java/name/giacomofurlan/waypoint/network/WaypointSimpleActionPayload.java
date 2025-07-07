@@ -1,6 +1,6 @@
 package name.giacomofurlan.waypoint.network;
 
-import name.giacomofurlan.waypoint.WaypointModServer;
+import name.giacomofurlan.waypoint.WaypointMod;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.util.Identifier;
@@ -8,22 +8,22 @@ import net.minecraft.util.Identifier;
 public record WaypointSimpleActionPayload(
     WaypointSimpleActionPayload.Action action, String waypointName, Boolean boolValue, Double doubleValue
 ) implements CustomPayload {
-    public static final Id<WaypointSimpleActionPayload> ID = new Id<>(Identifier.of(WaypointModServer.MOD_ID, "waypoint_simple_action"));
+    public static final Id<WaypointSimpleActionPayload> ID = new Id<>(Identifier.of(WaypointMod.MOD_ID, "waypoint_simple_action"));
 
     public WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action action) {
-        this(action, null, null, null);
+        this(action, "", false, 0.0);
     }
 
     public WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action action, String waypointName) {
-        this(action, waypointName, null, null);
+        this(action, waypointName, false, 0.0);
     }
 
     public WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action action, Boolean boolValue) {
-        this(action, null, boolValue, null);
+        this(action, "", boolValue, 0.0);
     }
 
     public WaypointSimpleActionPayload(WaypointSimpleActionPayload.Action action, Double doubleValue) {
-        this(action, null, null, doubleValue);
+        this(action, "", false, doubleValue);
     }
 
     public enum Action {
