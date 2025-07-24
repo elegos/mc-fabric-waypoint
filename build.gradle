@@ -31,7 +31,7 @@ dependencies {
 
 	// Specific mod dependencies
 	modImplementation "com.terraformersmc:modmenu:${project.modmenu_version}"
-	modImplementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
+	// modImplementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
 }
 
 processResources {
